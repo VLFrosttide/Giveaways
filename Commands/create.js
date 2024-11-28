@@ -1,8 +1,13 @@
 import {
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   SlashCommandBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ButtonInteraction,
+  time,
 } from "discord.js";
 
 export const data = new SlashCommandBuilder()
@@ -64,7 +69,56 @@ export async function execute(interaction) {
     .setStyle(ButtonStyle.Primary);
 
   const Row = new ActionRowBuilder().addComponents(NewButton);
+  let IntReply;
+  console.log("Fee: ", Fee);
+  console.log(typeof Fee);
+  if (Fee > 0) {
+    let CollectorFilter = (ButtonInt) => {
+      ButtonInt.customId === "GiveawayButton" &&
+        ButtonInt.user.id === interaction.user.id;
+    };
 
+    let GiveawayCollector = interaction.channel.createMessageComponentCollector(
+      {
+        CollectorFilter,
+        time: TimeNow.getTime() - Date.now(),
+      }
+    );
+    GiveawayCollector.on("collect", async (BtnInt) => {
+      let TicketModal = new ModalBuilder()
+        .setCustomId("TicketModal")
+        .setTitle("Choose how many tickets you'd like to buy");
+
+      let TicketInput = new TextInputBuilder()
+        .setCustomId("TicketInput")
+        .setLabel("Number of Tickets")
+        .setPlaceholder("Enter the number of tickets you want to buy")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const CollectorActionRow = new ActionRowBuilder().addComponents(
+        TicketInput
+      );
+      TicketModal.addComponents(CollectorActionRow);
+
+      await BtnInt.showModal(TicketModal);
+
+      BtnInt.client.once("interactionCreate", async (ModalInteraction) => {
+        if (
+          !ModalInteraction.isModalSubmit() ||
+          ModalInteraction.customId !== "TicketModal"
+        ) {
+          return;
+        }
+        let UserInput =
+          ModalInteraction.fields.getTextInputValue("TicketInput");
+        await ModalInteraction.reply({
+          content: `You successfully entered the giveaway ${UserInput} times`,
+          ephemeral: true,
+        });
+      });
+    });
+  }
   await interaction.reply({
     content: `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Reward:** ${Reward} karma \n**Expires: ${Timestamp}**`,
     components: [Row],
