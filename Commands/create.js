@@ -9,7 +9,6 @@ import {
   ButtonInteraction,
   time,
 } from "discord.js";
-
 export const data = new SlashCommandBuilder()
   .setName("giveaway")
   .setDescription("Create a giveaway")
@@ -41,6 +40,12 @@ export const data = new SlashCommandBuilder()
   )
   .addNumberOption((option) =>
     option
+      .setName("winners")
+      .setDescription("Number of winners")
+      .setRequired(true)
+  )
+  .addNumberOption((option) =>
+    option
       .setName("fee")
       .setDescription("Karma fee to enter the giveaway")
       .setRequired(false)
@@ -50,77 +55,36 @@ export async function execute(interaction) {
   let Title = interaction.options.getString("title");
   let Description = interaction.options.getString("description") || "";
   let Reward = interaction.options.getNumber("reward");
+  let Winners = interaction.options.getNumber("winners");
   let Fee = interaction.options.getNumber("fee") || 0;
+  /** @type {string} */
   let Time = interaction.options.getString("time");
-
-  Time = Time.split(":");
   let TimeNow = new Date();
-  console.log(Time);
-  console.log(Time[0]);
-  console.log(Time[1]);
+  if (Time.includes(":")) {
+    Time = Time.split(":");
+    TimeNow.setHours(TimeNow.getHours() + Number(Time[0]));
+    TimeNow.setMinutes(TimeNow.getMinutes() + Number(Time[1]));
+  } else {
+    TimeNow.setMinutes(TimeNow.getMinutes() + Number(Time));
+  }
 
-  TimeNow.setHours(TimeNow.getHours() + Number(Time[0]));
-  TimeNow.setMinutes(TimeNow.getMinutes() + Number(Time[1]));
   let Timestamp = `<t:${Math.floor(TimeNow.getTime() / 1000)}:f>`;
 
   const NewButton = new ButtonBuilder()
     .setCustomId("GiveawayButton")
     .setLabel("Participate")
     .setStyle(ButtonStyle.Primary);
-
-  const Row = new ActionRowBuilder().addComponents(NewButton);
-  let IntReply;
-  console.log("Fee: ", Fee);
-  console.log(typeof Fee);
   if (Fee > 0) {
-    let CollectorFilter = (ButtonInt) => {
-      ButtonInt.customId === "GiveawayButton" &&
-        ButtonInt.user.id === interaction.user.id;
-    };
-
-    let GiveawayCollector = interaction.channel.createMessageComponentCollector(
-      {
-        CollectorFilter,
-        time: TimeNow.getTime() - Date.now(),
-      }
-    );
-    GiveawayCollector.on("collect", async (BtnInt) => {
-      let TicketModal = new ModalBuilder()
-        .setCustomId("TicketModal")
-        .setTitle("Choose how many tickets you'd like to buy");
-
-      let TicketInput = new TextInputBuilder()
-        .setCustomId("TicketInput")
-        .setLabel("Number of Tickets")
-        .setPlaceholder("Enter the number of tickets you want to buy")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const CollectorActionRow = new ActionRowBuilder().addComponents(
-        TicketInput
-      );
-      TicketModal.addComponents(CollectorActionRow);
-
-      await BtnInt.showModal(TicketModal);
-
-      BtnInt.client.once("interactionCreate", async (ModalInteraction) => {
-        if (
-          !ModalInteraction.isModalSubmit() ||
-          ModalInteraction.customId !== "TicketModal"
-        ) {
-          return;
-        }
-        let UserInput =
-          ModalInteraction.fields.getTextInputValue("TicketInput");
-        await ModalInteraction.reply({
-          content: `You successfully entered the giveaway ${UserInput} times`,
-          ephemeral: true,
-        });
-      });
-    });
+    NewButton.setCustomId("GiveawayButtonModal");
+  }
+  console.log(NewButton);
+  const Row = new ActionRowBuilder().addComponents(NewButton);
+  let IntMsg = `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Reward:** ${Reward} karma\nWinners: ${Winners} \n**Expires: ${Timestamp}**`;
+  if (Fee > 0) {
+    IntMsg = `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Fee:** ${Fee} karma\n**Reward:** ${Reward} karma\n**Expires: ${Timestamp}**`;
   }
   await interaction.reply({
-    content: `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Reward:** ${Reward} karma \n**Expires: ${Timestamp}**`,
+    content: IntMsg,
     components: [Row],
   });
 }
