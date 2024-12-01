@@ -8,76 +8,95 @@ import {
   Routes,
 } from "discord.js";
 import { fileURLToPath } from "url";
-import { RegisterButtonListener } from "./Button.js";
+import { RegisterButtonListener } from "./Commands/Button.js";
+import { PrismaClient } from "@prisma/client";
 
-// Get directory paths for dynamic imports
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const db = new PrismaClient();
+export { db };
 
-// Initialize Discord Client
 export const MyClient = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
+// Get directory paths for dynamic imports
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
 
-// Command collection
-MyClient.commands = new Collection();
+  // Initialize Discord Client
 
-// Load command files dynamically
-const commandsPath = path.join(__dirname, "Commands");
-const CommandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".js"));
+  // Command collection
+  MyClient.commands = new Collection();
 
-// Import and load commands
-for (let file of CommandFiles) {
-  try {
-    const command = await import(`./Commands/${file}`);
-    if (!command.data || !command.execute) {
-      console.error(
-        `Command file ${file} is missing "data" or "execute" export.`
-      );
-      continue;
+  // Load command files dynamically
+  const commandsPath = path.join(__dirname, "Commands");
+  const CommandFiles = fs
+    .readdirSync(commandsPath)
+    .filter((file) => file.endsWith(".js"));
+
+  // Import and load commands
+  for (let file of CommandFiles) {
+    try {
+      const command = await import(`./Commands/${file}`);
+      if (!command.data || !command.execute) {
+        console.error(
+          `Command file ${file} is missing "data" or "execute" export.`
+        );
+        continue;
+      }
+      MyClient.commands.set(command.data.name, command);
+    } catch (err) {
+      console.error(`Failed to load command ${file}:`, err);
     }
-    MyClient.commands.set(command.data.name, command);
-  } catch (err) {
-    console.error(`Failed to load command ${file}:`, err);
   }
+
+  // Register commands with Discord
+  const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
+  (async () => {
+    try {
+      console.log("Registering slash commands...");
+
+      const commands = MyClient.commands.map((cmd) => cmd.data.toJSON());
+
+      await rest.put(Routes.applicationCommands(process.env.BotID), {
+        body: commands,
+      });
+    } catch (error) {
+      console.error("Failed to register slash commands:", error);
+    }
+  })();
+
+  MyClient.on("interactionCreate", async (interaction) => {
+    if (!interaction.isCommand()) return;
+
+    const command = MyClient.commands.get(interaction.commandName);
+    if (!command) return;
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(`Error executing ${interaction.commandName}:`, error);
+      await interaction.reply({
+        content: "There was an error executing this command!",
+        ephemeral: true,
+      });
+    }
+  });
+  RegisterButtonListener(MyClient);
+
+  MyClient.login(process.env.DISCORD_TOKEN);
+  // module.exports = MyClient;
+} catch (error) {
+  console.log("Myerror: ", error);
+  console.error(error);
 }
-
-// Register commands with Discord
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-
-(async () => {
-  try {
-    console.log("Registering slash commands...");
-
-    const commands = MyClient.commands.map((cmd) => cmd.data.toJSON());
-
-    await rest.put(Routes.applicationCommands(process.env.BotID), {
-      body: commands,
-    });
-  } catch (error) {
-    console.error("Failed to register slash commands:", error);
-  }
-})();
-
-MyClient.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  const command = MyClient.commands.get(interaction.commandName);
-  if (!command) return;
-
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(`Error executing ${interaction.commandName}:`, error);
-    await interaction.reply({
-      content: "There was an error executing this command!",
-      ephemeral: true,
-    });
-  }
+// Catch unhandled promise rejections globally
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled Promise Rejection:", error);
 });
-RegisterButtonListener(MyClient);
 
-MyClient.login(process.env.DISCORD_TOKEN);
-// module.exports = MyClient;
+// Catch uncaught exceptions globally
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  process.exit(1); // Optional: Exit the process after logging the error
+});

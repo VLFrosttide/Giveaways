@@ -71,13 +71,13 @@ export async function execute(interaction) {
   let Timestamp = `<t:${Math.floor(TimeNow.getTime() / 1000)}:f>`;
 
   const NewButton = new ButtonBuilder()
-    .setCustomId("GiveawayButton")
+    .setCustomId(`GiveawayButton${Title}`)
     .setLabel("Participate")
     .setStyle(ButtonStyle.Primary);
   if (Fee > 0) {
-    NewButton.setCustomId("GiveawayButtonModal");
+    NewButton.setCustomId(`GiveawayButtonModal${Title}`); //Assuming titlte will be something simple and can be used.
   }
-  console.log(NewButton);
+  console.log("Createjs: ", interaction);
   const Row = new ActionRowBuilder().addComponents(NewButton);
   let IntMsg = `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Reward:** ${Reward} karma\nWinners: ${Winners} \n**Expires: ${Timestamp}**`;
   if (Fee > 0) {
