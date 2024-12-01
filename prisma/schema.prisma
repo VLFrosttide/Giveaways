@@ -9,6 +9,6 @@ datasource db {
 
 model userentries {
   EntryIndex   Int    @id @default(autoincrement())
-  UserID       Int
+  UserID       String @db.VarChar(55)
   GiveawayName String @db.VarChar(255)
 }

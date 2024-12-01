@@ -8,11 +8,10 @@ import {
   Routes,
 } from "discord.js";
 import { fileURLToPath } from "url";
-import { RegisterButtonListener } from "./Commands/Button.js";
 import { PrismaClient } from "@prisma/client";
+export const db = new PrismaClient();
 
-const db = new PrismaClient();
-export { db };
+import { RegisterButtonListener } from "./Commands/Button.js";
 
 export const MyClient = new Client({
   intents: [GatewayIntentBits.Guilds],
@@ -82,7 +81,7 @@ try {
       });
     }
   });
-  RegisterButtonListener(MyClient);
+  RegisterButtonListener(MyClient, db);
 
   MyClient.login(process.env.DISCORD_TOKEN);
   // module.exports = MyClient;

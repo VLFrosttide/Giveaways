@@ -75,9 +75,8 @@ export async function execute(interaction) {
     .setLabel("Participate")
     .setStyle(ButtonStyle.Primary);
   if (Fee > 0) {
-    NewButton.setCustomId(`GiveawayButtonModal${Title}`); //Assuming titlte will be something simple and can be used.
+    NewButton.setCustomId(`GiveawayButtonModal${Title}:${Fee}`); //Assuming titlte will be something simple and can be used.
   }
-  console.log("Createjs: ", interaction);
   const Row = new ActionRowBuilder().addComponents(NewButton);
   let IntMsg = `🎉 **Giveaway Created!**\n\n**${Title}**\n${Description}\n**Reward:** ${Reward} karma\nWinners: ${Winners} \n**Expires: ${Timestamp}**`;
   if (Fee > 0) {
